@@ -10,15 +10,35 @@ using namespace std;
 
 int main( int argc, char* argv[] )
 {
-  if ( argc != 4 ) {
-    cerr << "Usage: run-experiment WORKER-COUNT DURATION TOPOLOGY" << endl;
+  if ( argc != 6 ) {
+    cerr << "Usage: run-experiment <master_ip> <master_port> <worker_count> <duration> <topology>" << endl;
     return EXIT_FAILURE;
   }
 
-  const size_t worker_count = stoull( argv[1] );
-  [[maybe_unused]] const size_t duration = stoull( argv[2] );
-  [[maybe_unused]] const string topology { argv[3] };
-  
+  // "Usage: lambdafunc <master_ip> <master_port> <thread_id> <duration> <block_dim> "
+
+  const string master_ip { argv[1] };
+  const string master_port { argv[2] };
+  const size_t worker_count = stoull( argv[3] );
+  [[maybe_unused]] const size_t duration = stoull( argv[4] );
+  [[maybe_unused]] const string topology { argv[5] };
+
+  vector<string> lambda_args;
+  lambda_args.push_back( master_ip );
+  lambda_args.push_back( master_port );
+  lambda_args.push_back( "" ); // worker_id placeholder
+  lambda_args.push_back( to_string( duration ) );
+  lambda_args.push_back( to_string( worker_count ) );
+
+  if ( topology == "a2a" ) {
+    for ( size_t i = 0; i < worker_count; i++ ) {
+      lambda_args.push_back( "x" + to_string( i ) );
+      lambda_args.push_back( to_string( i ) );
+    }
+  } else {
+    throw runtime_error( "unknown topology: " + topology );
+  }
+
   const string region = "us-west-1";
   const string function_name = "tempf";
 
@@ -42,10 +62,14 @@ int main( int argc, char* argv[] )
 
   // let's invoke the lambdas
   for ( size_t i = 0; i < worker_count; i++ ) {
+    lambda_args[2] = to_string( i );
+
+    nlohmann::json event_payload = { { "args", lambda_args } };
+
     HTTPRequest invocation_request = LambdaInvocationRequest( {},
                                                               region,
                                                               function_name,
-                                                              "{}",
+                                                              event_payload.dump(),
                                                               LambdaInvocationRequest::InvocationType::REQUEST_RESPONSE,
                                                               LambdaInvocationRequest::LogType::NONE )
                                        .to_http_request();
@@ -63,7 +87,9 @@ int main( int argc, char* argv[] )
       [&, it, i]( HTTPResponse&& response ) {
         nlohmann::json j = nlohmann::json::parse( response.body() );
 
+        cerr << "==== worker " << i << " (stdout) ====" << endl;
         cout << j["stdout"].get<string>();
+        cerr << "==== worker " << i << " (stderr) ====" << endl;
         cerr << j["stderr"].get<string>();
 
         if ( j["retcode"].get<int>() ) {
