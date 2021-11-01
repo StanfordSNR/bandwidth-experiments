@@ -1,6 +1,6 @@
 cmake_minimum_required ( VERSION 2.8.5 )
 cmake_policy ( SET CMP0054 NEW )
-project ( Starter )
+project ( Bandwidth-Experiments )
 
 include ( etc/build_defs.cmake )
 include ( etc/build_type.cmake )
@@ -13,11 +13,7 @@ include ( FindOpenSSL )
 file ( GLOB SOURCE
   src/util/*
   src/net/*
-  src/remote/*
-  src/schedulers/*
-  src/simulator/*
   src/nat/*
-  src/storage/*
 )
 
 include_directories ( src )
@@ -38,8 +34,6 @@ target_link_libraries( coordinator ${ALL_LIBS} )
 add_executable ( lambdafunc src/frontend/lambdafunc.cc )
 target_link_libraries( lambdafunc ${ALL_LIBS} )
 
-add_executable ( storageserver src/frontend/storageserver.cc )
-target_link_libraries( storageserver ${ALL_LIBS} )
 # Flags for building static binaries for AWS Lambda
 # set ( STATIC_LINK_FLAGS dl z unwind lzma -static -Wl,-allow-multiple-definition
 #                         -Wl,--whole-archive -lpthread -Wl,--no-whole-archive

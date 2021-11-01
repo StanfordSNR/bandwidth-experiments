@@ -1,9 +1,7 @@
-#include "nat/peer.hh"
-
 #include <set>
 
+#include "nat/peer.hh"
 #include "net/socket.hh"
-#include "storage/local_storage.hh"
 #include "util/eventloop.hh"
 #include "util/split.hh"
 #include "util/timerfd.hh"
