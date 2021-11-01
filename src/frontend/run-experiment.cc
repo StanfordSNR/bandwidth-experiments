@@ -10,12 +10,15 @@ using namespace std;
 
 int main( int argc, char* argv[] )
 {
-  if ( argc != 2 ) {
-    cerr << "Usage: run-experiment WORKER-COUNT" << endl;
+  if ( argc != 4 ) {
+    cerr << "Usage: run-experiment WORKER-COUNT DURATION TOPOLOGY" << endl;
     return EXIT_FAILURE;
   }
 
   const size_t worker_count = stoull( argv[1] );
+  const size_t duration = stoull( argv[2] );
+  const string topology { argv[3] };
+  
   const string region = "us-west-1";
   const string function_name = "tempf";
 
