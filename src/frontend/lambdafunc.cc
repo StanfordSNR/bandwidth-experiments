@@ -9,8 +9,6 @@
 using namespace std;
 using namespace std::chrono;
 
-ofstream fout { "/tmp/out" };
-
 enum class WorkerType
 {
   Send,
@@ -48,7 +46,7 @@ string generate_random_buffer( const size_t len )
 
 int main( int argc, char* argv[] )
 {
-  if ( argc < 5 ) {
+  if ( argc < 6 ) {
     cerr << "Usage: lambdafunc <master_ip> <master_port> <thread_id> <duration> <block_dim> "
          << "<active-worker>..." << endl;
     return EXIT_FAILURE;
@@ -65,7 +63,7 @@ int main( int argc, char* argv[] )
   list<Worker> peers;
   size_t max_peer_id = 0;
 
-  for ( auto& [peer_id, peer_ip] : get_peer_addresses( thread_id, master_ip, master_port, block_dim, fout ) ) {
+  for ( auto& [peer_id, peer_ip] : get_peer_addresses( thread_id, master_ip, master_port, block_dim ) ) {
     peers.emplace(
       peers.end(), peer_id, Address { peer_ip, static_cast<uint16_t>( 14000 + peer_id ) }, WorkerType::Send );
 
@@ -107,7 +105,7 @@ int main( int argc, char* argv[] )
       [&] { return peer.type == WorkerType::Send and recv_workers[thread_id] and send_workers[peer.thread_id]; },
       [&] { bytes_sent += peer.socket.write( send_buffer ); },
       [&] { return peer.type == WorkerType::Recv and send_workers[thread_id] and recv_workers[peer.thread_id]; },
-      [&] { fout << "peer died " << peer.thread_id << endl; } );
+      [&] { cerr << "peer died " << peer.thread_id << endl; } );
   }
 
   bool terminated = false;
@@ -120,7 +118,7 @@ int main( int argc, char* argv[] )
     logging_timer,
     [&] {
       logging_timer.read_event();
-      fout << thread_id << "," << duration_cast<seconds>( steady_clock::now() - start ).count() << "," << bytes_sent
+      cout << thread_id << "," << duration_cast<seconds>( steady_clock::now() - start ).count() << "," << bytes_sent
            << "," << bytes_recv << endl;
     },
     [] { return true; } );
@@ -128,10 +126,17 @@ int main( int argc, char* argv[] )
   TimerFD termination_timer { seconds { experiment_duration } };
 
   loop.add_rule(
-    "termination", Direction::In, termination_timer, [&] { peers.clear(); }, [&] { return not terminated; } );
+    "termination",
+    Direction::In,
+    termination_timer,
+    [&] {
+      terminated = true;
+      peers.clear();
+    },
+    [&] { return not terminated; } );
 
   loop.set_fd_failure_callback( [&] {
-    fout << "socket error occurred" << endl;
+    cerr << "socket error occurred" << endl;
     terminated = true;
   } );
 
@@ -140,7 +145,7 @@ int main( int argc, char* argv[] )
 
   const auto end = steady_clock::now();
 
-  fout << "time=" << duration_cast<milliseconds>( end - start ).count() << endl
+  cerr << "time=" << duration_cast<milliseconds>( end - start ).count() << endl
        << "total_bytes_sent=" << bytes_sent << endl
        << "total_bytes_recv=" << bytes_recv << endl;
 

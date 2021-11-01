@@ -1,5 +1,6 @@
 #include "peer.hh"
 
+#include <iostream>
 #include <vector>
 
 #include "net/socket.hh"
@@ -10,8 +11,7 @@ using namespace std;
 map<size_t, string> get_peer_addresses( const uint32_t thread_id,
                                         const string& master_ip,
                                         const uint16_t master_port,
-                                        const uint32_t block_dim,
-                                        ofstream& fout )
+                                        const uint32_t block_dim )
 {
   map<size_t, string> peers;
 
@@ -55,7 +55,7 @@ map<size_t, string> get_peer_addresses( const uint32_t thread_id,
     const string& ip = id_ip[1];
 
     if ( id == thread_id ) {
-      fout << "public_addr=" << ip << " (" << thread_id << ")" << endl;
+      cerr << "public_addr=" << ip << " (" << thread_id << ")" << endl;
       continue;
     }
 
