@@ -16,8 +16,8 @@ int main( int argc, char* argv[] )
   }
 
   const size_t worker_count = stoull( argv[1] );
-  const size_t duration = stoull( argv[2] );
-  const string topology { argv[3] };
+  [[maybe_unused]] const size_t duration = stoull( argv[2] );
+  [[maybe_unused]] const string topology { argv[3] };
   
   const string region = "us-west-1";
   const string function_name = "tempf";
