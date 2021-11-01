@@ -27,9 +27,7 @@ public:
                            const std::string& region,
                            const std::string& function_name,
                            const std::string& payload,
-                           const InvocationType invocation_type
-                           = InvocationType::REQUEST_RESPONSE,
+                           const InvocationType invocation_type = InvocationType::REQUEST_RESPONSE,
                            const LogType& log_type = LogType::NONE,
-                           const std::string& context
-                           = "e30=" /* base64( "{}" ) */ );
+                           const std::string& context = "e30=" /* base64( "{}" ) */ );
 };
