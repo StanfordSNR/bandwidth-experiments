@@ -20,7 +20,6 @@ include_directories ( src )
 
 add_library( starter STATIC
   ${SOURCE}
-
 )
 
 set ( ALL_LIBS
@@ -28,8 +27,8 @@ set ( ALL_LIBS
   ${OPENSSL_LIBRARIES}
 )
 
-add_executable ( coordinator src/frontend/coordinator.cc )
-target_link_libraries( coordinator ${ALL_LIBS} )
+add_executable ( run-experiment src/frontend/run-experiment.cc )
+target_link_libraries( run-experiment ${ALL_LIBS} )
 
 add_executable ( lambdafunc src/frontend/lambdafunc.cc )
 target_link_libraries( lambdafunc ${ALL_LIBS} )
