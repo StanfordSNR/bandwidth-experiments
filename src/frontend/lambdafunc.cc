@@ -89,7 +89,7 @@ int main( int argc, char* argv[] )
     }
   }
 
-  string send_buffer = generate_random_buffer( 1024 * 1024 ); // 1 MiB
+  string send_buffer = generate_random_buffer( 128 * 1024 ); // 1 MiB
   string read_buffer( 1 * 1024 * 1024, '\0' );
 
   size_t bytes_sent = 0;
