@@ -16,7 +16,7 @@ int main( int argc, char* argv[] )
     return EXIT_FAILURE;
   }
 
-  // "Usage: lambdafunc <master_ip> <master_port> <thread_id> <duration> <block_dim> "
+  // "Usage: lambdafunc <master_ip> <master_port> <worker_count> <thread_id> <duration> <block_dim> "
 
   const string master_ip { argv[1] };
   const string master_port { argv[2] };
@@ -30,7 +30,7 @@ int main( int argc, char* argv[] )
   lambda_args.push_back( to_string( worker_count ) );
   lambda_args.push_back( "" ); // worker_id placeholder
   lambda_args.push_back( to_string( duration ) );
-  lambda_args.push_back( to_string( worker_count ) );
+  lambda_args.push_back( "1" );
 
   if ( topology == "a2a" ) {
     for ( size_t i = 0; i < worker_count; i++ ) {
