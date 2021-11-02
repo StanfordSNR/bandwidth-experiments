@@ -1,4 +1,7 @@
+#include <iostream>
+#include <random>
 #include <set>
+#include <vector>
 
 #include "nat/peer.hh"
 #include "net/socket.hh"
@@ -58,20 +61,22 @@ int main( int argc, char* argv[] )
   const uint16_t master_port = static_cast<uint16_t>( stoul( argv[2] ) );
   const uint32_t thread_id = static_cast<uint32_t>( stoul( argv[3] ) );
   const uint32_t experiment_duration = static_cast<uint32_t>( stoul( argv[4] ) );
-  const uint32_t block_dim = static_cast<uint32_t>( stoul( argv[5] ) );
+  const uint32_t block_dim = static_cast<uint32_t>( 1 );
 
-  list<Worker> peers;
+  vector<shared_ptr<Worker>> peers;
   size_t max_peer_id = 0;
 
   for ( auto& [peer_id, peer_ip] : get_peer_addresses( thread_id, master_ip, master_port, block_dim ) ) {
-    peers.emplace(
-      peers.end(), peer_id, Address { peer_ip, static_cast<uint16_t>( 14000 + peer_id ) }, WorkerType::Send );
+    peers.emplace_back(
+      make_shared<Worker>( peer_id, Address { peer_ip, static_cast<uint16_t>( 14000 + peer_id ) }, WorkerType::Send ) );
 
-    peers.emplace(
-      peers.end(), peer_id, Address { peer_ip, static_cast<uint16_t>( 18000 + peer_id ) }, WorkerType::Recv );
+    peers.emplace_back(
+      make_shared<Worker>( peer_id, Address { peer_ip, static_cast<uint16_t>( 18000 + peer_id ) }, WorkerType::Recv ) );
 
     max_peer_id = max( max_peer_id, peer_id );
   }
+
+  shuffle( peers.begin(), peers.end(), mt19937 { random_device {}() } );
 
   vector<bool> send_workers( max_peer_id + 1 );
   vector<bool> recv_workers( max_peer_id + 1 );
@@ -84,7 +89,7 @@ int main( int argc, char* argv[] )
     }
   }
 
-  string send_buffer = generate_random_buffer( 1 * 1024 * 1024 );
+  string send_buffer = generate_random_buffer( 1024 * 1024 ); // 1 MiB
   string read_buffer( 1 * 1024 * 1024, '\0' );
 
   size_t bytes_sent = 0;
@@ -92,20 +97,23 @@ int main( int argc, char* argv[] )
 
   const auto start = steady_clock::now();
 
-  for ( auto& peer : peers ) {
-    peer.socket.bind( { "0", static_cast<uint16_t>( ( peer.type == WorkerType::Send ? 18000 : 14000 ) + thread_id ) } );
+  auto peer_category = loop.add_category( "peer" );
 
-    peer.socket.set_blocking( false );
-    peer.socket.connect( peer.addr );
+  for ( auto& peer : peers ) {
+    peer->socket.bind(
+      { "0", static_cast<uint16_t>( ( peer->type == WorkerType::Send ? 18000 : 14000 ) + thread_id ) } );
+
+    peer->socket.set_blocking( false );
+    peer->socket.connect( peer->addr );
 
     loop.add_rule(
-      "peer"s + to_string( peer.thread_id ),
-      peer.socket,
-      [&] { bytes_recv += peer.socket.read( { read_buffer } ); },
-      [&] { return peer.type == WorkerType::Send and recv_workers[thread_id] and send_workers[peer.thread_id]; },
-      [&] { bytes_sent += peer.socket.write( send_buffer ); },
-      [&] { return peer.type == WorkerType::Recv and send_workers[thread_id] and recv_workers[peer.thread_id]; },
-      [&] { cerr << "peer died " << peer.thread_id << endl; } );
+      peer_category,
+      peer->socket,
+      [&, &p = *peer] { bytes_recv += p.socket.read( { read_buffer } ); },
+      [&, &p = *peer] { return p.type == WorkerType::Send and recv_workers[thread_id] and send_workers[p.thread_id]; },
+      [&, &p = *peer] { bytes_sent += p.socket.write( send_buffer ); },
+      [&, &p = *peer] { return p.type == WorkerType::Recv and send_workers[thread_id] and recv_workers[p.thread_id]; },
+      [&, &p = *peer] { cerr << "peer died " << p.thread_id << endl; } );
   }
 
   bool terminated = false;
