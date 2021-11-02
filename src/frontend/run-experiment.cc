@@ -1,4 +1,5 @@
 #include <iostream>
+#include <random>
 
 #include "net/address.hh"
 #include "net/http_client.hh"
@@ -20,12 +21,13 @@ int main( int argc, char* argv[] )
   const string master_ip { argv[1] };
   const string master_port { argv[2] };
   const size_t worker_count = stoull( argv[3] );
-  [[maybe_unused]] const size_t duration = stoull( argv[4] );
-  [[maybe_unused]] const string topology { argv[5] };
+  const size_t duration = stoull( argv[4] );
+  const string topology { argv[5] };
 
   vector<string> lambda_args;
   lambda_args.push_back( master_ip );
   lambda_args.push_back( master_port );
+  lambda_args.push_back( to_string( worker_count ) );
   lambda_args.push_back( "" ); // worker_id placeholder
   lambda_args.push_back( to_string( duration ) );
   lambda_args.push_back( to_string( worker_count ) );
@@ -60,9 +62,13 @@ int main( int argc, char* argv[] )
   size_t response_count = 0;
   bool terminated = false;
 
+  vector<size_t> invocation_order( worker_count );
+  iota( invocation_order.begin(), invocation_order.end(), 0 );
+  shuffle( invocation_order.begin(), invocation_order.end(), mt19937 { random_device {}() } );
+
   // let's invoke the lambdas
-  for ( size_t i = 0; i < worker_count; i++ ) {
-    lambda_args[2] = to_string( i );
+  for ( const auto i : invocation_order ) {
+    lambda_args[3] = to_string( i );
 
     nlohmann::json event_payload = { { "args", lambda_args } };
 
@@ -105,6 +111,9 @@ int main( int argc, char* argv[] )
 
     it->push_request( move( invocation_request ) );
   }
+
+  // csv output header
+  cout << "worker,time,bytes_sent,bytes_received" << endl;
 
   loop.add_rule(
     "done", [&terminated] { terminated = true; }, [&] { return not terminated and response_count == worker_count; } );

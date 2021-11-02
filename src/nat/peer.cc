@@ -43,8 +43,6 @@ map<size_t, string> get_peer_addresses( const uint32_t thread_id,
     }
   }
 
-  cerr << response << endl;
-
   vector<string_view> peer_ips_strs;
   split( response, ';', peer_ips_strs );
   peer_ips_strs.erase( peer_ips_strs.begin() );
