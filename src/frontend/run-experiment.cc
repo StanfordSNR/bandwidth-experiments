@@ -113,7 +113,7 @@ int main( int argc, char* argv[] )
   }
 
   // csv output header
-  cout << "worker,time,bytes_sent,bytes_received" << endl;
+  cout << "worker,peer,time,bytes_sent,bytes_received" << endl;
 
   loop.add_rule(
     "done", [&terminated] { terminated = true; }, [&] { return not terminated and response_count == worker_count; } );

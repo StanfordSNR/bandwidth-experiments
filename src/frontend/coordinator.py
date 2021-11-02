@@ -13,8 +13,10 @@ dones = set()
 BD = int(sys.argv[2])
 
 def accept_wrapper(sock):
+    global public_ips
+
     conn, addr = sock.accept()  # Should be ready to read
-    print("accepted connection from", addr)
+    print(f"[{len(public_ips)}] accepted connection from", addr)
     conn.setblocking(False)
     data = types.SimpleNamespace(addr=addr, inb=b"", outb=b"", name = "")
     events = selectors.EVENT_READ | selectors.EVENT_WRITE

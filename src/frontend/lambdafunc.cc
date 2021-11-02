@@ -24,6 +24,9 @@ struct Worker
   TCPSocket socket {};
   WorkerType type;
 
+  size_t bytes_sent { 0 };
+  size_t bytes_recv { 0 };
+
   Worker( const size_t thread_id_, const Address& addr_, const WorkerType type_ )
     : thread_id( thread_id_ )
     , addr( addr_ )
@@ -85,9 +88,6 @@ int main( int argc, char* argv[] )
   string send_buffer = generate_random_buffer( 128 * 1024 ); // 1 MiB
   string read_buffer( 1 * 1024 * 1024, '\0' );
 
-  size_t bytes_sent = 0;
-  size_t bytes_recv = 0;
-
   auto peer_category = loop.add_category( "peer" );
   const auto start = steady_clock::now();
 
@@ -105,11 +105,11 @@ int main( int argc, char* argv[] )
     loop.add_rule(
       peer_category,
       peers[i]->socket,
-      [&, &p = *peers[i]] { bytes_recv += p.socket.read( { read_buffer } ); },
+      [&, &p = *peers[i]] { p.bytes_recv += p.socket.read( { read_buffer } ); },
       [&, &p = *peers[i]] {
         return p.type == WorkerType::Send and recv_workers[thread_id] and send_workers[p.thread_id];
       },
-      [&, &p = *peers[i]] { bytes_sent += p.socket.write( send_buffer ); },
+      [&, &p = *peers[i]] { p.bytes_sent += p.socket.write( send_buffer ); },
       [&, &p = *peers[i]] {
         return p.type == WorkerType::Recv and send_workers[thread_id] and recv_workers[p.thread_id];
       },
@@ -126,8 +126,19 @@ int main( int argc, char* argv[] )
     logging_timer,
     [&] {
       logging_timer.read_event();
-      cout << thread_id << "," << duration_cast<seconds>( steady_clock::now() - start ).count() << "," << bytes_sent
-           << "," << bytes_recv << endl;
+
+      map<size_t, pair<size_t, size_t>> data;
+
+      for ( auto& peer : peers ) {
+        auto& d = data[peer->thread_id];
+        d.first += peer->bytes_sent;
+        d.second += peer->bytes_recv;
+      }
+
+      for ( auto& [peer_id, x] : data ) {
+        cout << thread_id << "," << peer_id << "," << duration_cast<seconds>( steady_clock::now() - start ).count()
+             << "," << x.first << "," << x.second << endl;
+      }
     },
     [] { return true; } );
 
@@ -153,9 +164,7 @@ int main( int argc, char* argv[] )
 
   const auto end = steady_clock::now();
 
-  cerr << "time=" << duration_cast<milliseconds>( end - start ).count() << endl
-       << "total_bytes_sent=" << bytes_sent << endl
-       << "total_bytes_recv=" << bytes_recv << endl;
+  cerr << "time=" << duration_cast<milliseconds>( end - start ).count() << endl;
 
   return EXIT_SUCCESS;
 }
