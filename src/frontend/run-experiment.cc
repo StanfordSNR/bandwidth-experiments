@@ -30,13 +30,20 @@ int main( int argc, char* argv[] )
   lambda_args.push_back( to_string( worker_count ) );
   lambda_args.push_back( "" ); // worker_id placeholder
   lambda_args.push_back( to_string( duration ) );
-  lambda_args.push_back( "1" );
+  lambda_args.push_back( "1" ); // block_dim
 
   if ( topology == "a2a" ) {
     for ( size_t i = 0; i < worker_count; i++ ) {
       lambda_args.push_back( "x" + to_string( i ) );
       lambda_args.push_back( to_string( i ) );
     }
+  } else if ( topology == "group5" ) {
+    for ( size_t i = 0; i < worker_count; i++ ) {
+      lambda_args.push_back( "x" + to_string( i ) );
+      lambda_args.push_back( to_string( i ) );
+    }
+
+    lambda_args[5] = to_string( worker_count / 5 );
   } else {
     throw runtime_error( "unknown topology: " + topology );
   }
