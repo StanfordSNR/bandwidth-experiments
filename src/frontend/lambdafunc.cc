@@ -105,15 +105,15 @@ int main( int argc, char* argv[] )
     loop.add_rule(
       peer_category,
       peers[i]->socket,
-      [&, &p = *peers[i]] { p.bytes_recv += p.socket.read( { read_buffer } ); },
-      [&, &p = *peers[i]] {
-        return p.type == WorkerType::Send and recv_workers[thread_id] and send_workers[p.thread_id];
+      [&, p = peers[i]] { p->bytes_recv += p->socket.read( { read_buffer } ); },
+      [&, p = peers[i]] {
+        return p->type == WorkerType::Send and recv_workers[thread_id] and send_workers[p->thread_id];
       },
-      [&, &p = *peers[i]] { p.bytes_sent += p.socket.write( send_buffer ); },
-      [&, &p = *peers[i]] {
-        return p.type == WorkerType::Recv and send_workers[thread_id] and recv_workers[p.thread_id];
+      [&, p = peers[i]] { p->bytes_sent += p->socket.write( send_buffer ); },
+      [&, p = peers[i]] {
+        return p->type == WorkerType::Recv and send_workers[thread_id] and recv_workers[p->thread_id];
       },
-      [&, &p = *peers[i]] { cerr << "peer died " << p.thread_id << endl; } );
+      [&, p = peers[i]] { cerr << "peer died " << p->thread_id << endl; } );
   }
 
   bool terminated = false;
@@ -145,14 +145,7 @@ int main( int argc, char* argv[] )
   TimerFD termination_timer { seconds { experiment_duration } };
 
   loop.add_rule(
-    "termination",
-    Direction::In,
-    termination_timer,
-    [&] {
-      terminated = true;
-      peers.clear();
-    },
-    [&] { return not terminated; } );
+    "termination", Direction::In, termination_timer, [&] { terminated = true; }, [&] { return not terminated; } );
 
   loop.set_fd_failure_callback( [&] {
     cerr << "socket error occurred" << endl;
