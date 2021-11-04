@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sys/syscall.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
@@ -38,7 +39,8 @@ RingBuffer::RingBuffer( const size_t capacity )
       throw runtime_error( "RingBuffer capacity must be multiple of page size (" + to_string( sysconf( _SC_PAGESIZE ) )
                            + ")" );
     }
-    FileDescriptor fd { SystemCall( "memfd_create", memfd_create( "RingBuffer", 0 ) ) };
+    FileDescriptor fd { SystemCall( "memfd_create",
+                                    syscall( SYS_memfd_create, "RingBuffer", 0 ) ) };
     SystemCall( "ftruncate", ftruncate( fd.fd_num(), capacity ) );
     return fd;
   }() )
